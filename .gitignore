@@ -1,0 +1,25 @@
+# 大文件 / 压缩包（不推送）
+*.zip
+
+# 第三方依赖库（426MB，需自行克隆）
+sim/third_party/
+
+# 训练日志
+wandb/
+**/wandb/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# WorkBuddy
+.workbuddy/
