@@ -31,9 +31,7 @@ def find_gr00t_root() -> Path:
     )
 
     for candidate in candidates:
-        data_config = candidate / "gr00t/experiment/data_config.py"
-        dataset = candidate / "gr00t/data/dataset.py"
-        if data_config.exists() and dataset.exists():
+        if candidate.exists():
             return candidate.resolve()
 
     searched = "\n  - ".join(str(path) for path in candidates)
@@ -46,6 +44,30 @@ def find_gr00t_root() -> Path:
 
 GR00T_ROOT = find_gr00t_root()
 print(f"使用 Isaac-GR00T 路径: {GR00T_ROOT}")
+
+
+def find_source_file(root: Path, relative_path: str, filename: str) -> Path:
+    preferred = root / relative_path
+    if preferred.exists():
+        return preferred
+
+    matches = sorted(
+        path
+        for path in root.rglob(filename)
+        if ".git" not in path.parts and path.is_file()
+    )
+    if len(matches) == 1:
+        return matches[0]
+    if matches:
+        formatted = "\n  - ".join(str(path) for path in matches)
+        raise RuntimeError(
+            f"找到多个 {filename}，请设置正确的 GR00T_ROOT 或手动检查：\n  - {formatted}"
+        )
+    raise FileNotFoundError(
+        f"在 {root} 下找不到 {relative_path}，也没有搜索到 {filename}。"
+        "请确认 Isaac-GR00T 是否 clone 完整，或运行 find Isaac-GR00T -name "
+        f"'{filename}' 检查实际路径。"
+    )
 
 
 def backup_once(path: Path) -> None:
@@ -67,7 +89,12 @@ def remove_existing_franka_class(content: str) -> str:
 # 1a. 追加 FrankaDataConfig 类
 # 1b. 在 DATA_CONFIG_MAP 末尾插入 "franka" 条目
 
-DATA_CONFIG_PATH = GR00T_ROOT / "gr00t/experiment/data_config.py"
+DATA_CONFIG_PATH = find_source_file(
+    GR00T_ROOT,
+    "gr00t/experiment/data_config.py",
+    "data_config.py",
+)
+print(f"修改 data_config.py: {DATA_CONFIG_PATH}")
 franka_class = (PATCHES_DIR / "franka_data_config.py").read_text().strip()
 
 with open(DATA_CONFIG_PATH, "r") as f:
@@ -107,7 +134,12 @@ with open(DATA_CONFIG_PATH, "w") as f:
 # ── 补丁 2: dataset.py ──────────────────────────────────────
 # 追加 LiberoSingleDataset 类
 
-DATASET_PATH = GR00T_ROOT / "gr00t/data/dataset.py"
+DATASET_PATH = find_source_file(
+    GR00T_ROOT,
+    "gr00t/data/dataset.py",
+    "dataset.py",
+)
+print(f"修改 dataset.py: {DATASET_PATH}")
 libero_class = (PATCHES_DIR / "libero_single_dataset.py").read_text()
 
 with open(DATASET_PATH, "r") as f:
