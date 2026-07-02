@@ -1,35 +1,94 @@
 #!/usr/bin/env python3
 """将文档要求的代码修改自动注入到 Isaac-GR00T 源码中。
 
-由 server/Dockerfile 在构建时调用：
-    python /workspace/server/patches/apply.py
+可以在项目根目录直接运行：
+    python server/patches/apply.py
+
+也可以通过环境变量指定 Isaac-GR00T 路径：
+    GR00T_ROOT=/path/to/Isaac-GR00T python server/patches/apply.py
 """
 
+import os
 import re
 import shutil
 from pathlib import Path
 
 PATCHES_DIR = Path(__file__).resolve().parent
-GR00T_ROOT = Path("/workspace/Isaac-GR00T")
+PROJECT_ROOT = PATCHES_DIR.parents[1]
+
+
+def find_gr00t_root() -> Path:
+    env_root = os.environ.get("GR00T_ROOT")
+    candidates = []
+    if env_root:
+        candidates.append(Path(env_root).expanduser())
+    candidates.extend(
+        [
+            PROJECT_ROOT / "Isaac-GR00T",
+            Path.cwd() / "Isaac-GR00T",
+            Path("/workspace/Isaac-GR00T"),
+        ]
+    )
+
+    for candidate in candidates:
+        data_config = candidate / "gr00t/experiment/data_config.py"
+        dataset = candidate / "gr00t/data/dataset.py"
+        if data_config.exists() and dataset.exists():
+            return candidate.resolve()
+
+    searched = "\n  - ".join(str(path) for path in candidates)
+    raise FileNotFoundError(
+        "未找到 Isaac-GR00T 源码目录。请在 Project7 根目录运行，"
+        "或设置 GR00T_ROOT=/path/to/Isaac-GR00T。\n已检查：\n  - "
+        + searched
+    )
+
+
+GR00T_ROOT = find_gr00t_root()
+print(f"使用 Isaac-GR00T 路径: {GR00T_ROOT}")
+
+
+def backup_once(path: Path) -> None:
+    backup_path = path.with_suffix(path.suffix + ".bak")
+    if not backup_path.exists():
+        shutil.copy2(path, backup_path)
+
+
+def remove_existing_franka_class(content: str) -> str:
+    pattern = (
+        r"\n\nclass FrankaDataConfig\(BaseDataConfig\):"
+        r".*?"
+        r"(?=\n\n(?:class |DATA_CONFIG_MAP\s*=|#)|\Z)"
+    )
+    return re.sub(pattern, "", content, flags=re.DOTALL)
+
 
 # ── 补丁 1: data_config.py ──────────────────────────────────
 # 1a. 追加 FrankaDataConfig 类
 # 1b. 在 DATA_CONFIG_MAP 末尾插入 "franka" 条目
 
 DATA_CONFIG_PATH = GR00T_ROOT / "gr00t/experiment/data_config.py"
-franka_class = (PATCHES_DIR / "franka_data_config.py").read_text()
+franka_class = (PATCHES_DIR / "franka_data_config.py").read_text().strip()
 
 with open(DATA_CONFIG_PATH, "r") as f:
     content = f.read()
 
-# 1a: 追加 FrankaDataConfig 类（如果还没加过）
-if "class FrankaDataConfig" not in content:
-    content += "\n\n" + franka_class
-    print("✅ 已注入 FrankaDataConfig")
+# 1a: 确保 FrankaDataConfig 定义在 DATA_CONFIG_MAP 之前
+content = remove_existing_franka_class(content)
+if "DATA_CONFIG_MAP" not in content:
+    raise RuntimeError(f"{DATA_CONFIG_PATH} 中未找到 DATA_CONFIG_MAP")
+content, count = re.subn(
+    r"\n(DATA_CONFIG_MAP\s*=)",
+    lambda match: "\n\n" + franka_class + "\n\n" + match.group(1),
+    content,
+    count=1,
+)
+if count == 0:
+    raise RuntimeError(f"{DATA_CONFIG_PATH} 中 DATA_CONFIG_MAP 格式不符合预期")
+print("✅ 已注入 FrankaDataConfig")
 
 # 1b: 在 DATA_CONFIG_MAP 末尾插入 "franka" 条目
 if '"franka"' not in content:
-    # 找 DATA_CONFIG_MAP = { 后，最后一个独立的 }
     pattern = r'(DATA_CONFIG_MAP\s*=\s*\{[^}]*?)\n(\})'
     replacement = r'\1\n    "franka": FrankaDataConfig(),\n\2'
     content, count = re.subn(pattern, replacement, content, flags=re.DOTALL)
@@ -41,7 +100,7 @@ else:
     print("ℹ️  DATA_CONFIG_MAP 已包含 franka，跳过")
 
 # 写回
-shutil.copy2(DATA_CONFIG_PATH, str(DATA_CONFIG_PATH) + ".bak")
+backup_once(DATA_CONFIG_PATH)
 with open(DATA_CONFIG_PATH, "w") as f:
     f.write(content)
 
@@ -60,7 +119,7 @@ if "class LiberoSingleDataset" not in content:
 else:
     print("ℹ️  dataset.py 已包含 LiberoSingleDataset，跳过")
 
-shutil.copy2(DATASET_PATH, str(DATASET_PATH) + ".bak")
+backup_once(DATASET_PATH)
 with open(DATASET_PATH, "w") as f:
     f.write(content)
 
