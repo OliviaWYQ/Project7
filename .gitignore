@@ -1,3 +1,7 @@
+# 数据集 (不上传 Git，存 OSS)
+libero_object_no_noops_lerobot/
+Isaac-GR00T/
+
 # 大文件 / 压缩包（不推送）
 *.zip
 
@@ -20,6 +24,3 @@ __pycache__/
 # IDE
 .vscode/
 .idea/
-
-# WorkBuddy
-.workbuddy/
