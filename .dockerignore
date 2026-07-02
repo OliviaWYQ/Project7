@@ -1,0 +1,19 @@
+# 不进入镜像的目录/文件
+sim/
+*.gif
+*.png
+*.pdf
+*.md
+*.pt
+*.pth
+*.zip
+wandb/
+**/wandb/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+.DS_Store
+.vscode/
+.idea/
+.workbuddy/
