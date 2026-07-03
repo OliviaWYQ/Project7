@@ -216,7 +216,7 @@ def main() -> int:
     check_runtime_hints()
 
     failed = [item for item in results if not item[1]]
-    warnings = [item for item in results if item[1] and item[2].startswith("WARN:")]
+    warnings = [item for item in results if item[1] and str(item[2]).startswith("WARN:")]
 
     print("\n== Summary ==")
     print(f"checks={len(results)}, failed={len(failed)}, warnings={len(warnings)}")
