@@ -9,6 +9,7 @@ Run from the Project7 root on the 4070 machine:
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import os
 from pathlib import Path
 import platform
