@@ -1,22 +1,39 @@
 # 数据集 (不上传 Git，存 OSS)
 libero_object_no_noops_lerobot/
+
+# GitHub 克隆的源码（需自行克隆）
 Isaac-GR00T/
+
+# 模型文件（需从 HuggingFace 下载）
+GR00T-N1-2B/
+*.safetensors
+*.pt
+*.pth
+*.bin
+*.ckpt
+
+# 训练输出 / checkpoint
+output/
+
+# 第三方依赖库（426MB，需自行初始化 submodule）
+sim/third_party/
 
 # 大文件 / 压缩包（不推送）
 *.zip
 
-# 第三方依赖库（426MB，需自行克隆）
-sim/third_party/
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Python
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
 
 # 训练日志
 wandb/
 **/wandb/
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.egg-info/
 
 # macOS
 .DS_Store
